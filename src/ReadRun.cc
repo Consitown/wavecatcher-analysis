@@ -1075,11 +1075,12 @@ void ReadRun::PrintBaselineCorrectionResults(float rangestart, float rangeend, i
 /// @param use_spline If false will use linear interpolation between the two bins closest to cf_r. \n
 /// If true will use a 5th order spline and bisection method for interpolation. 
 /// Performs a bit better in most cases compared to only linear interpolation. 
-void ReadRun::GetTimingCFD(float cf_r, float start_at_t, float end_at_t, double sigma, bool find_CF_from_start, int smooth_method, bool use_spline) {
+void ReadRun::GetTimingCFD(float cf_r, float start_at_t, float end_at_t, float max_diff, double sigma, bool find_CF_from_start, int smooth_method, bool use_spline) {
 
 	int start_at = static_cast<int>(floor(start_at_t / SP));
 	int end_at = static_cast<int>(ceil(end_at_t / SP));
 	int n_range = end_at - start_at;
+	int false_flag = 0;
 
 	cout << "\nGet timing at " << (cf_r > 0 && cf_r <= 1 ? "CF=" : "threshold=");
 	printf("%.2f between %.2f ns and %.2f ns (%d waveforms):\n", cf_r, start_at_t, end_at_t, nwf);
@@ -1100,21 +1101,23 @@ void ReadRun::GetTimingCFD(float cf_r, float start_at_t, float end_at_t, double 
 		}
 
 		float cf = cf_r;
-		if (cf_r > 0 && cf_r <= 1) cf *= max;
-
+		float min_search = static_cast<float>(n_max) - max_diff/SP; // minimal starting bin such that the calculated cfd-time is at least maximum-max_diff
+		if (max_diff/SP > n_max) min_search = 0.;
 		if (!find_CF_from_start) {
 			i = n_max;
 			while (yvals[i] > cf && i >= 0) i--;
 			i++;
 		}
 		else {
-			i = 0;
-			while (yvals[i] < cf && i < n_max) i++;
+			i = static_cast<int>(floor(min_search));
+			//i = 0;
+			while (yvals[i] < cf && i <= n_max) i++;
 			i--;
 		}
 
 		// do interpolation for cf
 		float interpol_bin = .0;
+		if (cf < yvals[i]) false_flag = 1; // flag if the interpolation will fail
 		interpol_bin = LinearInterpolation(cf, static_cast<float>(i), static_cast<float>(i + 1), yvals[i], yvals[i + 1]);
 		// go to center of bin
 		interpol_bin += .5;
@@ -1152,7 +1155,9 @@ void ReadRun::GetTimingCFD(float cf_r, float start_at_t, float end_at_t, double 
 		timing_results[j].push_back(cf);													// constant fraction
 		timing_results[j].push_back(static_cast<float>(start_at) * SP);						// starting time
 		timing_results[j].push_back(static_cast<float>(end_at) * SP);						// end time
+		timing_results[j].push_back(false_flag); // set the flag for failed interpolation
 		delete[] yvals;
+		false_flag = 0;
 		
 		Helpers::PrintProgressBar(j, nwf);
 	}

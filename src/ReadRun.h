@@ -138,7 +138,7 @@ public:
 	void PrintBaselineCorrectionResults(float = -5, float = 5, int = 200);
 
 	// get timing of peaks
-	void GetTimingCFD(float = .3, float = 100, float = 140, double = 0., bool = true, int = 2, bool = false);
+	void GetTimingCFD(float = .3, float = 100, float = 140, float = 100, double = 0., bool = true, int = 2, bool = false);
 	void SkipEventsTimeDiffCut(int, int, double, double, bool = false);
 
 	void FractionEventsAboveThreshold(float = 4, bool = true, bool = true, double = 0., double = 0., bool = false);
